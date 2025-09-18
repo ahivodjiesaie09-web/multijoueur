@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Multiplayer avec Noms</title>
+  <link rel="stylesheet" href="style.css"> <!-- Lien vers le CSS -->
+  <style>
+    body { font-family: Arial; background:#222; color:#fff; text-align:center; padding:20px; }
+    h1 { color:#f0a500; }
+    .container { max-width:800px; margin:auto; background: rgba(0,0,0,0.7); padding:20px; border-radius:10px; }
+    input, button { padding:10px; margin:10px 0; border-radius:5px; border:none; font-size:16px; }
+    button { background:#4267B2; color:white; cursor:pointer; }
+    button:hover { background:#365899; }
+    .playerAnswer { margin:10px 0; }
+    #questionArea { margin-top:20px; }
+    #result { margin-top:10px; font-weight:bold; white-space:pre-line; }
+    #scoreBoard { margin-top:20px; text-align:left; }
+    footer { margin-top:30px; font-size:14px; color:#bbb; }
+    footer span { color:#f0a500; font-weight:bold; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Quiz Multiplayer avec Noms</h1>
+
+    <div id="playerSetup">
+        <input type="number" id="numPlayers" placeholder="Nombre de joueurs (1 à 4)" min="1" max="4">
+        <button onclick="askNames()">Suivant</button>
+    </div>
+
+    <div id="nameSetup" style="display:none;">
+        <div id="nameInputs"></div>
+        <button onclick="startQuiz()">Commencer le Quiz</button>
+    </div>
+
+    <div id="quiz" style="display:none;">
+        <div id="questionArea">
+            <h2 id="questionText"></h2>
+            <div id="answersContainer"></div>
+            <button onclick="submitAnswers()">Valider les réponses</button>
+            <div id="result"></div>
+        </div>
+        <div id="scoreBoard"></div>
+    </div>
+
+    <!-- Signature du propriétaire -->
+    <footer>
+      © 2025 - Ce site appartient à <span>Esaïe Ahivodji</span>.
+    </footer>
+</div>
+
+<script>
+// =============================
+// 200 QUESTIONS DE CULTURE GÉNÉRALE
+// =============================
+const questions = [
+  { q:"Capitale de la France ?", a:"Paris" },
+  { q:"2 + 2 ?", a:"4" },
+  { q:"Pays avec la plus grande superficie ?", a:"Russie" },
+  { q:"Montagne la plus haute du monde ?", a:"Everest" },
+  { q:"Langage officiel du Brésil ?", a:"Portugais" },
+  { q:"Qui a peint la Joconde ?", a:"Leonard de Vinci" },
+  { q:"Quelle est la planète la plus proche du Soleil ?", a:"Mercure" },
+  { q:"Année de la Révolution française ?", a:"1789" },
+  { q:"Combien font 9 x 9 ?", a:"81" },
+  { q:"Capitale du Japon ?", a:"Tokyo" },
+  { q:"Symbole chimique de l'eau ?", a:"H2O" },
+  { q:"Capitale de l'Allemagne ?", a:"Berlin" },
+  { q:"Qui a inventé l'ampoule électrique ?", a:"Thomas Edison" },
+  { q:"Combien de continents sur Terre ?", a:"7" },
+  { q:"Capitale du Canada ?", a:"Ottawa" },
+  { q:"Plus grand océan du monde ?", a:"Pacifique" },
+  { q:"Année de la première guerre mondiale ?", a:"1914" },
+  { q:"Langue officielle de l'Égypte ?", a:"Arabe" },
+  { q:"Combien font 15 + 7 ?", a:"22" },
+  { q:"Capitale de l'Espagne ?", a:"Madrid" },
+  { q:"Capitale de l’Italie ?", a:"Rome" },
+  { q:"Qui a écrit 'Les Misérables' ?", a:"Victor Hugo" },
+  { q:"Le plus grand désert du monde ?", a:"Sahara" },
+  { q:"Capitale de la Russie ?", a:"Moscou" },
+  { q:"Capitale du Portugal ?", a:"Lisbonne" },
+  { q:"Combien de joueurs dans une équipe de football ?", a:"11" },
+  { q:"Capitale de la Chine ?", a:"Pékin" },
+  { q:"Qui a découvert l'Amérique ?", a:"Christophe Colomb" },
+  { q:"Combien de jours dans une année bissextile ?", a:"366" },
+  { q:"Capitale du Maroc ?", a:"Rabat" },
+  { q:"Capitale de la Tunisie ?", a:"Tunis" },
+  { q:"Capitale de l’Inde ?", a:"New Delhi" },
+  { q:"Capitale de l’Argentine ?", a:"Buenos Aires" },
+  { q:"Capitale de l’Afrique du Sud ?", a:"Pretoria" },
+  { q:"Symbole chimique du fer ?", a:"Fe" },
+  { q:"Capitale du Sénégal ?", a:"Dakar" },
+  { q:"Capitale du Nigeria ?", a:"Abuja" },
+  { q:"Capitale du Kenya ?", a:"Nairobi" },
+  { q:"Capitale de l’Australie ?", a:"Canberra" },
+  { q:"Capitale de la Turquie ?", a:"Ankara" },
+  { q:"Capitale de la Grèce ?", a:"Athènes" },
+  { q:"Capitale de la Pologne ?", a:"Varsovie" },
+  { q:"Capitale de la Suède ?", a:"Stockholm" },
+  { q:"Capitale de la Norvège ?", a:"Oslo" },
+  { q:"Capitale de la Finlande ?", a:"Helsinki" },
+  { q:"Capitale de la Suisse ?", a:"Berne" },
+  { q:"Capitale de la Belgique ?", a:"Bruxelles" },
+  { q:"Capitale des Pays-Bas ?", a:"Amsterdam" },
+  { q:"Capitale de l’Autriche ?", a:"Vienne" },
+  { q:"Capitale de la Hongrie ?", a:"Budapest" },
+  { q:"Capitale de la Tchéquie ?", a:"Prague" },
+  { q:"Capitale de la Roumanie ?", a:"Bucarest" },
+  { q:"Capitale de la Bulgarie ?", a:"Sofia" },
+  { q:"Capitale de la Croatie ?", a:"Zagreb" },
+  { q:"Capitale de la Serbie ?", a:"Belgrade" },
+  { q:"Capitale de l’Ukraine ?", a:"Kiev" },
+  { q:"Capitale de la Corée du Sud ?", a:"Séoul" },
+  { q:"Capitale de la Corée du Nord ?", a:"Pyongyang" },
+  { q:"Capitale du Vietnam ?", a:"Hanoï" },
+  { q:"Capitale de la Thaïlande ?", a:"Bangkok" },
+  { q:"Capitale du Cambodge ?", a:"Phnom Penh" },
+  { q:"Capitale de l’Indonésie ?", a:"Jakarta" },
+  { q:"Capitale de la Malaisie ?", a:"Kuala Lumpur" },
+  { q:"Capitale de Singapour ?", a:"Singapour" },
+  { q:"Capitale des Philippines ?", a:"Manille" },
+  { q:"Capitale du Pakistan ?", a:"Islamabad" },
+  { q:"Capitale de l’Afghanistan ?", a:"Kaboul" },
+  { q:"Capitale de l’Iran ?", a:"Téhéran" },
+  { q:"Capitale de l’Irak ?", a:"Bagdad" },
+  { q:"Capitale de l’Arabie Saoudite ?", a:"Riyad" },
+  { q:"Capitale d’Israël ?", a:"Jérusalem" },
+  { q:"Capitale de la Jordanie ?", a:"Amman" },
+  { q:"Capitale du Liban ?", a:"Beyrouth" },
+  { q:"Capitale de la Syrie ?", a:"Damas" },
+  { q:"Capitale du Qatar ?", a:"Doha" },
+  { q:"Capitale des Émirats arabes unis ?", a:"Abu Dhabi" },
+  { q:"Capitale du Koweït ?", a:"Koweït" },
+  { q:"Capitale d’Oman ?", a:"Mascate" },
+  { q:"Capitale du Yémen ?", a:"Sanaa" },
+  { q:"Capitale du Mexique ?", a:"Mexico" },
+  { q:"Capitale du Pérou ?", a:"Lima" },
+  { q:"Capitale du Chili ?", a:"Santiago" },
+  { q:"Capitale de la Colombie ?", a:"Bogotá" },
+  { q:"Capitale de l’Équateur ?", a:"Quito" },
+  { q:"Capitale du Venezuela ?", a:"Caracas" },
+  { q:"Capitale de Cuba ?", a:"La Havane" },
+  { q:"Capitale d’Haïti ?", a:"Port-au-Prince" },
+  { q:"Capitale de la Jamaïque ?", a:"Kingston" },
+  { q:"Capitale de la République dominicaine ?", a:"Saint-Domingue" },
+  { q:"Capitale du Costa Rica ?", a:"San José" },
+  { q:"Capitale du Panama ?", a:"Panama" },
+  { q:"Capitale du Honduras ?", a:"Tegucigalpa" },
+  { q:"Capitale du Salvador ?", a:"San Salvador" },
+  { q:"Capitale du Guatemala ?", a:"Guatemala" },
+  { q:"Capitale du Nicaragua ?", a:"Managua" },
+  { q:"Capitale du Paraguay ?", a:"Asuncion" },
+  { q:"Capitale de l’Uruguay ?", a:"Montevideo" },
+  { q:"Capitale de la Bolivie ?", a:"La Paz" },
+  { q:"Capitale du Ghana ?", a:"Accra" },
+  { q:"Capitale de la Côte d’Ivoire ?", a:"Yamoussoukro" },
+  { q:"Capitale du Cameroun ?", a:"Yaoundé" },
+  { q:"Capitale du Mali ?", a:"Bamako" },
+  { q:"Capitale du Niger ?", a:"Niamey" },
+  { q:"Capitale du Burkina Faso ?", a:"Ouagadougou" },
+  { q:"Capitale du Tchad ?", a:"N’Djamena" },
+  { q:"Capitale du Congo-Brazzaville ?", a:"Brazzaville" },
+  { q:"Capitale de la RDC ?", a:"Kinshasa" },
+  { q:"Capitale du Gabon ?", a:"Libreville" },
+  { q:"Capitale de la Guinée ?", a:"Conakry" },
+  { q:"Capitale du Bénin ?", a:"Porto-Novo" },
+  { q:"Capitale du Togo ?", a:"Lomé" },
+  { q:"Capitale de la Mauritanie ?", a:"Nouakchott" },
+  { q:"Capitale de Madagascar ?", a:"Antananarivo" },
+  { q:"Capitale du Zimbabwe ?", a:"Harare" },
+  { q:"Capitale de la Zambie ?", a:"Lusaka" },
+  { q:"Capitale de l’Ouganda ?", a:"Kampala" },
+  { q:"Capitale de l’Éthiopie ?", a:"Addis-Abeba" },
+  { q:"Capitale de l’Érythrée ?", a:"Asmara" },
+  { q:"Capitale du Soudan ?", a:"Khartoum" },
+  { q:"Capitale du Soudan du Sud ?", a:"Djouba" },
+  { q:"Capitale de la Tanzanie ?", a:"Dodoma" },
+  { q:"Capitale du Mozambique ?", a:"Maputo" },
+  { q:"Capitale de l’Angola ?", a:"Luanda" },
+  { q:"Capitale de la Namibie ?", a:"Windhoek" },
+  { q:"Capitale du Botswana ?", a:"Gaborone" },
+  { q:"Capitale de l’Eswatini ?", a:"Mbabane" },
+  { q:"Capitale du Lesotho ?", a:"Maseru" },
+  { q:"Capitale de la Guinée-Bissau ?", a:"Bissau" },
+  { q:"Capitale de la Sierra Leone ?", a:"Freetown" },
+  { q:"Capitale du Liberia ?", a:"Monrovia" },
+  { q:"Capitale du Rwanda ?", a:"Kigali" },
+  { q:"Capitale du Burundi ?", a:"Bujumbura" },
+  { q:"Capitale des Seychelles ?", a:"Victoria" },
+  { q:"Capitale des Comores ?", a:"Moroni" },
+  { q:"Capitale du Malawi ?", a:"Lilongwe" },
+  { q:"Capitale du Sénégal ?", a:"Dakar" },
+  { q:"Capitale de Maurice ?", a:"Port-Louis" },
+  { q:"Capitale du Bhoutan ?", a:"Thimphou" },
+  { q:"Capitale du Népal ?", a:"Katmandou" },
+  { q:"Capitale du Sri Lanka ?", a:"Colombo" },
+  { q:"Capitale du Bangladesh ?", a:"Dacca" },
+  { q:"Capitale de la Mongolie ?", a:"Oulan-Bator" },
+  { q:"Capitale du Kazakhstan ?", a:"Astana" },
+  { q:"Capitale de l’Ouzbékistan ?", a:"Tachkent" },
+  { q:"Capitale du Turkménistan ?", a:"Achgabat" },
+  { q:"Capitale du Kirghizistan ?", a:"Bichkek" },
+  { q:"Capitale du Tadjikistan ?", a:"Douchanbé" }
+];
+
+// =============================
+// VARIABLES & LOGIQUE
+// =============================
+let currentQuestion = 0;
+let numPlayers = 1;
+let scores = [];
+let playerNames = [];
+
+function askNames() {
+    numPlayers = parseInt(document.getElementById('numPlayers').value);
+    if(numPlayers < 1 || numPlayers > 4) return alert("Nombre de joueurs entre 1 et 4 !");
+    const nameInputs = document.getElementById('nameInputs');
+    nameInputs.innerHTML = "";
+    for(let i=0;i<numPlayers;i++){
+        nameInputs.innerHTML += `<input type="text" id="name${i}" placeholder="Nom du joueur ${i+1}"><br>`;
+    }
+    document.getElementById('playerSetup').style.display = "none";
+    document.getElementById('nameSetup').style.display = "block";
+}
+
+function startQuiz() {
+    playerNames = [];
+    for(let i=0;i<numPlayers;i++){
+        const name = document.getElementById(`name${i}`).value.trim();
+        if(name==="") { alert("Veuillez entrer tous les noms !"); return; }
+        playerNames.push(name);
+    }
+    scores = Array(numPlayers).fill(0);
+    document.getElementById('nameSetup').style.display = "none";
+    document.getElementById('quiz').style.display = "block";
+    showQuestion();
+}
+
+function showQuestion() {
+    const q = questions[currentQuestion].q;
+    document.getElementById('questionText').innerText = `Question ${currentQuestion+1} : ${q}`;
+    const container = document.getElementById('answersContainer');
+    container.innerHTML = "";
+    for(let i=0;i<numPlayers;i++){
+        const div = document.createElement("div");
+        div.className = "playerAnswer";
+        div.innerHTML = `<label>${playerNames[i]} :</label>
+                         <input type="text" id="answer${i}" placeholder="Réponse...">`;
+        container.appendChild(div);
+    }
+    document.getElementById('result').innerText = "";
+}
+
+function submitAnswers() {
+    const correct = questions[currentQuestion].a.toLowerCase();
+    let resultText = "";
+    for(let i=0;i<numPlayers;i++){
+        const answer = document.getElementById(`answer${i}`).value.trim().toLowerCase();
+        if(answer === correct){
+            resultText += `${playerNames[i]} : ✅ Bonne réponse ! La réponse est ${questions[currentQuestion].a}\n`;
+            scores[i]++;
+        } else {
+            resultText += `${playerNames[i]} : ❌ Mauvaise réponse ! La bonne réponse est ${questions[currentQuestion].a}\n`;
+        }
+    }
+    document.getElementById('result').innerText = resultText;
+    updateScoreBoard();
+    currentQuestion++;
+    if(currentQuestion >= questions.length){
+        setTimeout(showFinalScores, 3000);
+    } else {
+        setTimeout(showQuestion, 3000);
+    }
+}
+
+function updateScoreBoard() {
+    let sb = "<h3>Scores :</h3>";
+    for(let i=0;i<numPlayers;i++){
+        sb += `${playerNames[i]} : ${scores[i]}<br>`;
+    }
+    document.getElementById('scoreBoard').innerHTML = sb;
+}
+
+function showFinalScores() {
+    let sb = "<h2>Quiz terminé !</h2><h3>Scores finaux :</h3>";
+    for(let i=0;i<numPlayers;i++){
+        sb += `${playerNames[i]} : ${scores[i]}<br>`;
+    }
+    document.getElementById('quiz').innerHTML = sb;
+}
+</script>
+</body>
+</html>
